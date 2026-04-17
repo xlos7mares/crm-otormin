@@ -4,7 +4,7 @@ import numpy as np
 import urllib.parse
 from datetime import datetime
 
-# 1. CONFIGURACIÓN Y ESTILO
+# 1. CONFIGURACIÓN DE ALTO NIVEL
 st.set_page_config(page_title="OTORMÍN BI - SISTEMA INTEGRADO", page_icon="🏦", layout="wide")
 
 st.markdown("""
@@ -22,9 +22,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. GESTIÓN DE BASE DE DATOS EN MEMORIA (Para pruebas)
+# 2. GESTIÓN DE BASE DE DATOS EN MEMORIA
 if "db_clientes" not in st.session_state:
-    # Datos iniciales de ejemplo
     st.session_state.db_clientes = pd.DataFrame([
         {"Cliente": "Federico Rossi", "Telefono": "59899123456", "Vehículo": "Mercedes Benz A200", "Matrícula": "IAE 1234", "Saldo": 450, "Cuota_Nro": 5, "Cuotas_Totales": 12, "Riesgo": "🔴 Crítico", "Recibo_ID": "OT-1001"},
         {"Cliente": "María Gonzalez", "Telefono": "59899111222", "Vehículo": "Toyota Hilux", "Matrícula": "MAA 5678", "Saldo": 200, "Cuota_Nro": 12, "Cuotas_Totales": 36, "Riesgo": "🟡 Regular", "Recibo_ID": "OT-1002"}
@@ -51,85 +50,100 @@ if not st.session_state["logueado"]:
 else:
     with st.sidebar:
         st.title("BI CONTABLE")
+        # NOMBRES SIMPLES PARA EVITAR ERRORES DE LECTURA
         opcion = st.radio("MÓDULOS:", [
-            "📥 Cargar Nuevo Cliente",
-            "📊 Dashboard Financiero", 
-            "💰 Caja & WhatsApp", 
-            "🧮 Refinanciación",
-            "📄 Emisión de Recibos"
+            "Cargar Datos",
+            "Dashboard", 
+            "Caja & WhatsApp", 
+            "Refinanciación",
+            "Emisión de Recibos"
         ])
+        st.write("---")
         if st.button("Cerrar Sesión"):
             st.session_state["logueado"] = False
             st.rerun()
 
-    # --- MÓDULO 1: CARGA DE DATOS (NUEVO) ---
-    if opcion == "📥 Cargar Nuevo Cliente":
+    # --- MÓDULO 1: CARGAR DATOS ---
+    if opcion == "Cargar Datos":
         st.subheader("📝 Registro de Nueva Operación")
-        st.info("Completá los datos para que se impacten en el Dashboard y la lista de Cobros.")
-        
         with st.form("form_carga"):
             c1, c2 = st.columns(2)
             with c1:
-                nuevo_nombre = st.text_input("Nombre y Apellido del Cliente")
-                nuevo_tel = st.text_input("Teléfono (Ej: 59899...)")
-                nuevo_auto = st.text_input("Vehículo (Marca y Modelo)")
+                nuevo_nombre = st.text_input("Nombre del Cliente")
+                nuevo_tel = st.text_input("Teléfono")
+                nuevo_auto = st.text_input("Vehículo")
                 nueva_mat = st.text_input("Matrícula")
             with c2:
-                nuevo_saldo = st.number_input("Saldo Pendiente (USD)", min_value=0)
+                nuevo_saldo = st.number_input("Saldo (USD)", min_value=0)
                 n_cuota = st.number_input("Cuota Actual", min_value=1)
-                t_cuotas = st.number_input("Total de Cuotas del Plan", min_value=1)
-                nuevo_riesgo = st.selectbox("Calificación de Riesgo", ["🟢 Excelente", "🟡 Regular", "🔴 Crítico"])
+                t_cuotas = st.number_input("Total Cuotas", min_value=1)
+                nuevo_riesgo = st.selectbox("Riesgo", ["🟢 Excelente", "🟡 Regular", "🔴 Crítico"])
             
-            if st.form_submit_button("💾 GUARDAR EN CARTERA"):
+            if st.form_submit_button("💾 GUARDAR"):
                 nuevo_reg = {
                     "Cliente": nuevo_nombre, "Telefono": nuevo_tel, "Vehículo": nuevo_auto,
                     "Matrícula": nueva_mat, "Saldo": nuevo_saldo, "Cuota_Nro": n_cuota,
                     "Cuotas_Totales": t_cuotas, "Riesgo": nuevo_riesgo, 
                     "Recibo_ID": f"OT-{np.random.randint(2000, 9999)}"
                 }
-                # Actualizar la base de datos en memoria
                 st.session_state.db_clientes = pd.concat([st.session_state.db_clientes, pd.DataFrame([nuevo_reg])], ignore_index=True)
-                st.success(f"¡Cliente {nuevo_nombre} cargado con éxito!")
+                st.success("¡Cliente guardado!")
 
-    # --- MÓDULO 2: DASHBOARD (Usa los datos cargados) ---
-    elif opcion == "📊 Dashboard Financiero":
+    # --- MÓDULO 2: DASHBOARD ---
+    elif opcion == "Dashboard":
         st.subheader("Análisis de Solvencia")
         df_act = st.session_state.db_clientes
-        mora_total = df_act["Saldo"].sum()
-        
         c1, c2, c3 = st.columns(3)
-        c1.metric("Capital en Mora", f"USD {mora_total:,}")
-        c2.metric("Clientes Activos", len(df_act))
-        c3.metric("Ratio de Riesgo Crítico", f"{len(df_act[df_act['Riesgo'] == '🔴 Crítico'])}")
-        
-        st.write("---")
-        st.dataframe(df_act[["Cliente", "Vehículo", "Saldo", "Riesgo"]], use_container_width=True)
+        c1.metric("Mora Total", f"USD {df_act['Saldo'].sum():,}")
+        c2.metric("Clientes", len(df_act))
+        c3.metric("Críticos", len(df_act[df_act['Riesgo'] == '🔴 Crítico']))
+        st.area_chart(df_act["Saldo"])
 
-    # --- MÓDULO 3: COBROS & WHATSAPP ---
-    elif opcion == "💰 Caja & WhatsApp":
-        st.subheader("Gestión de Cobranza Directa")
+    # --- MÓDULO 3: CAJA & WHATSAPP ---
+    elif opcion == "Caja & WhatsApp":
+        st.subheader("Gestión de Cobranza")
         df_act = st.session_state.db_clientes
         for i, r in df_act.iterrows():
             with st.expander(f"{r['Riesgo']} | {r['Cliente']} - {r['Vehículo']}"):
-                st.write(f"**Deuda:** USD {r['Saldo']} | **Cuota:** {r['Cuota_Nro']}/{r['Cuotas_Totales']}")
-                msg = f"Otormín: Hola {r['Cliente']}, recordamos saldo de USD {r['Saldo']}."
-                ws_url = f"https://wa.me/{r['Telefono']}?text={urllib.parse.quote(msg)}"
-                st.markdown(f'<a href="{ws_url}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; width:100%;">📲 WhatsApp</button></a>', unsafe_allow_html=True)
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**Deuda:** USD {r['Saldo']} | **Cuota:** {r['Cuota_Nro']}/{r['Cuotas_Totales']}")
+                with col2:
+                    msg = f"Otormín: Hola {r['Cliente']}, recordamos saldo de USD {r['Saldo']}."
+                    ws_url = f"https://wa.me/{r['Telefono']}?text={urllib.parse.quote(msg)}"
+                    st.markdown(f'<a href="{ws_url}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; width:100%;">📲 WhatsApp</button></a>', unsafe_allow_html=True)
 
-    # --- MÓDULO 4: RECIBOS ---
-    elif opcion == "📄 Emisión de Recibos":
+    # --- MÓDULO 4: REFINANCIACIÓN (ESTE ES EL QUE ESTABA VACÍO) ---
+    elif opcion == "Refinanciación":
+        st.subheader("Simulador de Refinanciación")
+        df_act = st.session_state.db_clientes
+        cli = st.selectbox("Seleccionar Deudor:", df_act[df_act["Saldo"] > 0]["Cliente"])
+        monto = df_act[df_act["Cliente"] == cli]["Saldo"].values[0]
+        
+        c_a, c_b = st.columns(2)
+        with c_a:
+            cuotas = st.number_input("Nuevas cuotas:", 1, 24, 6)
+            interes = st.slider("Interés mensual (%):", 0.0, 10.0, 2.0)
+        
+        total = monto * (1 + (interes/100) * cuotas)
+        
+        with c_b:
+            st.markdown(f"""
+                <div style="background-color:#1C2126; padding:20px; border-radius:10px; border:1px solid #55acee;">
+                    <h4>Nueva Liquidación</h4>
+                    <p>Total con Interés: <b>USD {total:,.2f}</b></p>
+                    <p>Cuota mensual: <b>USD {total/cuotas:,.2f}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
+
+    # --- MÓDULO 5: RECIBOS ---
+    elif opcion == "Emisión de Recibos":
         df_act = st.session_state.db_clientes
         sel = st.selectbox("Titular:", df_act["Cliente"])
         inf = df_act[df_act["Cliente"] == sel].iloc[0]
-        
         st.markdown(f"""
             <div class="recibo-render">
-                <table style="width:100%; color:black;">
-                    <tr>
-                        <td><h2 style="color:#004a99 !important; margin:0;">OTORMÍN</h2></td>
-                        <td style="text-align:right;"><b>ID: {inf['Recibo_ID']}</b><br>{datetime.now().strftime('%d/%m/%Y')}</td>
-                    </tr>
-                </table>
+                <h2 style="color:#004a99 !important; text-align:center;">OTORMÍN</h2>
                 <hr>
                 <div style="color:black;">
                     <p><b>CLIENTE:</b> {sel.upper()}</p>
