@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import io
 
-# 1. ESTILO NEGRO OTORMÍN (CONTROL DE TAMAÑO)
+# 1. CONFIGURACIÓN Y ESTILO NEGRO (ORDENADO)
 st.set_page_config(page_title="CRM OTORMÍN 2026", page_icon="🚗", layout="wide")
 
 st.markdown("""
@@ -12,16 +11,21 @@ st.markdown("""
         [data-testid="stSidebar"] { background-color: #15191D; border-right: 2px solid #55acee; }
         h1, h2, h3 { color: #55acee !important; text-align: center; }
         
-        /* Evita que el gráfico se estire al infinito */
-        .chart-container { max-width: 800px; margin: auto; }
-        
-        /* Tarjetas de métricas ordenadas */
-        div[data-testid="metric-container"] {
-            background-color: #1C2126;
-            border: 1px solid #30363d;
-            padding: 10px;
-            border-radius: 10px;
+        /* Contenedor del recibo para que se vea como una hoja real */
+        .recibo-hoja {
+            background-color: white;
+            color: black;
+            padding: 40px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            max-width: 700px;
+            margin: auto;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
+        
+        /* Fix para el gráfico */
+        .chart-container { max-width: 800px; margin: auto; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -42,9 +46,8 @@ if not st.session_state["logueado"]:
                     st.rerun()
                 else: st.error("Acceso Incorrecto")
 
-# 3. SISTEMA
+# 3. SISTEMA ACTIVO
 else:
-    # Datos base para el CRM
     data = {
         "Cliente": ["Federico Rossi", "María Gonzalez", "Juan Castro", "Ana Ledesma"],
         "Vehículo": ["Mercedes Benz A200", "Toyota Hilux", "VW Gol Trend", "Fiat Cronos"],
@@ -63,7 +66,7 @@ else:
             st.session_state["logueado"] = False
             st.rerun()
 
-    # --- TABLERO SIN DEFORMIDADES ---
+    # --- TABLERO ---
     if opcion == "📊 Tablero":
         st.markdown("<h2>Resumen Operativo</h2>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
@@ -77,52 +80,39 @@ else:
         st.area_chart([12, 18, 14, 25, 30])
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- DOCUMENTOS (RECIBO PDF REAL) ---
+    # --- DOCUMENTOS (RECIBO PROFESIONAL SIN LIBRERÍAS) ---
     elif opcion == "📄 Documentos":
         st.header("📄 Generador de Recibos Oficiales")
         sel = st.selectbox("Seleccione Cliente:", df["Cliente"])
         info = df[df["Cliente"] == sel].iloc[0]
 
-        # Cuadro de datos previo
-        st.info(f"Recibo: {info['Recibo']} | Auto: {info['Vehículo']} | Saldo: USD {info['Saldo']}")
+        # El Recibo en pantalla
+        st.markdown(f"""
+            <div class="recibo-hoja">
+                <h1 style="color: #004a99 !important; text-align: center; margin: 0;">AUTOMOTORA OTORMÍN</h1>
+                <p style="text-align: center; font-size: 0.8em; color: #555;">PAYSANDÚ - URUGUAY</p>
+                <hr>
+                <div style="display: flex; justify-content: space-between;">
+                    <span><b>RECIBO:</b> {info['Recibo']}</span>
+                    <span><b>FECHA:</b> {datetime.now().strftime('%d/%m/%Y')}</span>
+                </div>
+                <br>
+                <p><b>CLIENTE:</b> {sel}</p>
+                <p><b>AUTOMOTOR:</b> {info['Vehículo']} (Matrícula: {info['Matrícula']})</p>
+                <p><b>CUOTA NRO:</b> {info['Cuota']}</p>
+                <br>
+                <div style="border: 2px solid black; padding: 10px; text-align: center; font-size: 1.5em;">
+                    <b>IMPORTE: USD {info['Saldo']}</b>
+                </div>
+                <br><br><br>
+                <div style="border-top: 1px solid black; width: 200px; margin-left: auto; text-align: center;">
+                    <p style="font-size: 0.8em;">Firma Administración</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("📥 GENERAR Y BAJAR PDF"):
-            try:
-                from fpdf import FPDF
-                
-                pdf = FPDF()
-                pdf.add_page()
-                
-                # Encabezado Azul Otormín
-                pdf.set_fill_color(85, 172, 238)
-                pdf.rect(0, 0, 210, 40, 'F')
-                pdf.set_font("Arial", 'B', 24)
-                pdf.set_text_color(255, 255, 255)
-                pdf.cell(0, 20, "AUTOMOTORA OTORMÍN", 0, 1, 'C')
-                
-                # Cuerpo (Datos que pediste)
-                pdf.set_text_color(0, 0, 0)
-                pdf.ln(30)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, f"RECIBO NRO: {info['Recibo']}", 0, 1, 'R')
-                pdf.cell(0, 10, f"FECHA: {datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'R')
-                pdf.ln(10)
-                
-                # Tabla de detalles
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(60, 10, "CLIENTE:", 1); pdf.set_font("Arial", '', 12); pdf.cell(0, 10, f" {sel}", 1, 1)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(60, 10, "VEHICULO:", 1); pdf.set_font("Arial", '', 12); pdf.cell(0, 10, f" {info['Vehículo']} (Mat: {info['Matrícula']})", 1, 1)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(60, 10, "CUOTA NRO:", 1); pdf.set_font("Arial", '', 12); pdf.cell(0, 10, f" {info['Cuota']}", 1, 1)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(60, 10, "IMPORTE:", 1); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, f" USD {info['Saldo']}", 1, 1)
-                
-                pdf_bytes = pdf.output(dest='S').encode('latin-1')
-                st.download_button(label="✅ Descarga lista - Click aquí", data=pdf_bytes, file_name=f"Recibo_{sel}.pdf", mime="application/pdf")
-                
-            except ImportError:
-                st.error("⚠️ El sistema aún está instalando el módulo de PDF. Refrescá la página en 10 segundos.")
+        st.write("")
+        st.warning("💡 **Para guardar como PDF:** Presioná **CTRL + P** (o 'Imprimir' en el menú del navegador) y seleccioná **'Guardar como PDF'**.")
 
     elif opcion == "🔍 Buscador":
         st.header("🔍 Buscador de Cartera")
