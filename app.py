@@ -22,19 +22,18 @@ if not st.session_state["logueado"]:
     with col:
         st.write("#")
         st.markdown("<h1 style='text-align: center; color: #55acee;'>🚗 CRM OTORMÍN 2026</h1>", unsafe_allow_html=True)
-        with st.form("login"):
+        with st.form("login_otormin"):
             u = st.text_input("Usuario")
             p = st.text_input("Contraseña", type="password")
             if st.form_submit_button("INGRESAR AL SISTEMA"):
                 if u == "Admin" and p == "Otormin2026":
                     st.session_state["logueado"] = True
                     st.rerun()
-                else:
-                    st.error("Acceso Denegado")
+                else: 
+                    st.error("Credenciales incorrectas para Otormín")
 
 # --- SISTEMA ACTIVO ---
 else:
-    # Estilos Visuales
     st.markdown("""
         <style>
             .stApp { background-color: #0E1117; color: white; }
@@ -50,7 +49,7 @@ else:
         </style>
     """, unsafe_allow_html=True)
 
-    # Datos
+    # Datos cargados para la demostración
     df = pd.DataFrame({
         "Cliente": ["Federico Rossi", "María Gonzalez", "Juan Castro", "Ana Ledesma", "Roberto Peña"],
         "Vehículo": ["Mercedes Benz A200", "Toyota Hilux", "VW Gol Trend", "Fiat Cronos", "Ford Ranger"],
@@ -61,42 +60,47 @@ else:
         "longitude": [-58.0850, -58.0790, -58.0910, -58.0820, -58.1000]
     })
 
-    # Barra Lateral
+    # Navegación Lateral
     with st.sidebar:
         st.title("OTORMÍN")
         opcion = st.radio("MENÚ:", ["📊 Inteligencia", "💰 Cobros", "🔍 Buscador", "📄 Documentos", "📍 Mapa"])
-        if st.button("Cerrar Sesión"):
+        if st.button("🚪 Cerrar Sesión"):
             st.session_state["logueado"] = False
             st.rerun()
 
-    # Contenido Central
+    # Título Principal dinámico
     st.markdown(f"<h1 style='text-align: center;'>CRM OTORMÍN - {opcion.upper()}</h1>", unsafe_allow_html=True)
+    st.write("---")
 
     if opcion == "📊 Inteligencia":
         c1, c2, c3 = st.columns(3)
         c1.markdown('<div class="card"><h3>EN MORA</h3><h2 style="color:red">5 Clientes</h2><p>USD 2.210</p></div>', unsafe_allow_html=True)
         c2.markdown('<div class="card"><h3>A COBRAR</h3><h2 style="color:cyan">4 Clientes</h2><p>USD 1.850</p></div>', unsafe_allow_html=True)
         c3.markdown('<div class="card"><h3>TOTAL CARTERA</h3><h2>20 Registros</h2><p>USD 15.400</p></div>', unsafe_allow_html=True)
-        st.line_chart({"Cobros Estimados": [15, 30, 22, 45, 38]})
+        st.subheader("📈 Proyección de Ingresos Semanales")
+        st.line_chart({"Cobros": [15, 30, 22, 45, 38]})
 
     elif opcion == "💰 Cobros":
-        st.subheader("📋 Gestión de Cartera")
+        st.subheader("📋 Gestión de Cartera y Cobranza")
         st.dataframe(df[["Cliente", "Vehículo", "Vencimiento", "Estado", "Saldo (USD)"]], use_container_width=True, hide_index=True)
 
     elif opcion == "🔍 Buscador":
-        busq = st.text_input("Buscar cliente...")
+        st.subheader("🔍 Buscador de Fichas")
+        busq = st.text_input("Ingresa nombre del cliente...")
         if busq:
             res = df[df['Cliente'].str.contains(busq, case=False)]
             for _, r in res.iterrows():
                 with st.expander(f"👤 {r['Cliente']}"):
-                    st.write(f"Auto: {r['Vehículo']} | Saldo: ${r['Saldo (USD)']}")
+                    st.write(f"**Vehículo:** {r['Vehículo']} | **Estado:** {r['Estado']}")
+                    st.write(f"**Saldo pendiente:** USD {r['Saldo (USD)']}")
 
     elif opcion == "📄 Documentos":
-        st.subheader("📄 Generación de Recibos")
+        st.subheader("📄 Generación de Documentos")
         sel = st.selectbox("Cliente:", df["Cliente"])
-        if st.button("Generar PDF Oficial"):
-            st.success(f"Recibo de Automotora Otormín para {sel} generado con éxito.")
+        if st.button("Generar Recibo de Pago"):
+            st.success(f"Recibo para {sel} preparado con éxito.")
+            st.info("Formato oficial de Automotora Otormín listo para procesar.")
 
     elif opcion == "📍 Mapa":
-        st.subheader("📍 Mapa de Deudores (Paysandú)")
+        st.subheader("📍 Mapa de Cartera (Paysandú)")
         st.map(df[["latitude", "longitude"]])
