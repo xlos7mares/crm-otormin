@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURACIÓN Y ESTILO NEGRO (ORDENADO)
+# 1. CONFIGURACIÓN VISUAL (ESTILO NEGRO PROFESIONAL)
 st.set_page_config(page_title="CRM OTORMÍN 2026", page_icon="🚗", layout="wide")
 
 st.markdown("""
@@ -11,29 +11,45 @@ st.markdown("""
         [data-testid="stSidebar"] { background-color: #15191D; border-right: 2px solid #55acee; }
         h1, h2, h3 { color: #55acee !important; text-align: center; }
         
-        /* Contenedor del recibo para que se vea como una hoja real */
-        .recibo-hoja {
+        /* DISEÑO DEL RECIBO TIPO HOJA REAL */
+        .recibo-box {
             background-color: white;
-            color: black;
+            color: #1a1a1a;
             padding: 40px;
-            border-radius: 5px;
-            font-family: 'Courier New', Courier, monospace;
-            max-width: 700px;
+            border-radius: 8px;
+            font-family: 'Arial', sans-serif;
+            max-width: 750px;
             margin: auto;
-            border: 1px solid #ddd;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border: 1px solid #ccc;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
-        
-        /* Fix para el gráfico */
-        .chart-container { max-width: 800px; margin: auto; }
+        .header-recibo {
+            border-bottom: 3px solid #55acee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .datos-cliente { line-height: 1.8; font-size: 1.1em; }
+        .monto-box {
+            background-color: #f0f2f6;
+            border: 2px solid #55acee;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 if "logueado" not in st.session_state:
     st.session_state["logueado"] = False
 
-# 2. LOGIN
+# 2. ACCESO
 if not st.session_state["logueado"]:
+    st.write("#")
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown("<h1>🚗 CRM OTORMÍN</h1>", unsafe_allow_html=True)
@@ -46,79 +62,84 @@ if not st.session_state["logueado"]:
                     st.rerun()
                 else: st.error("Acceso Incorrecto")
 
-# 3. SISTEMA ACTIVO
+# 3. INTERFAZ DE GESTIÓN
 else:
+    # Datos actualizados con cuotas restantes
     data = {
         "Cliente": ["Federico Rossi", "María Gonzalez", "Juan Castro", "Ana Ledesma"],
         "Vehículo": ["Mercedes Benz A200", "Toyota Hilux", "VW Gol Trend", "Fiat Cronos"],
         "Matrícula": ["IAE 1234", "MAA 5678", "PAA 9012", "IAA 3456"],
-        "Estado": ["VENCIDO", "AL DÍA", "AL DÍA", "VENCIDO"],
-        "Saldo": [450, 0, 0, 320],
-        "Cuota": [5, 12, 8, 3],
-        "Recibo": ["OT-1001", "OT-1002", "OT-1003", "OT-1004"]
+        "Saldo": [450, 200, 0, 320],
+        "Cuota_Nro": [5, 12, 8, 3],
+        "Cuotas_Restantes": [7, 24, 0, 21],
+        "Recibo_ID": ["OT-1001", "OT-1002", "OT-1003", "OT-1004"]
     }
     df = pd.DataFrame(data)
 
     with st.sidebar:
         st.title("OTORMÍN")
-        opcion = st.radio("MENÚ:", ["📊 Tablero", "💰 Cobros", "🔍 Buscador", "📄 Documentos"])
-        if st.button("🚪 Cerrar Sesión"):
+        opcion = st.radio("MENÚ:", ["📊 Tablero", "💰 Cobros", "🔍 Buscador", "📄 Recibos"])
+        if st.button("Cerrar Sesión"):
             st.session_state["logueado"] = False
             st.rerun()
 
-    # --- TABLERO ---
-    if opcion == "📊 Tablero":
-        st.markdown("<h2>Resumen Operativo</h2>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("EN MORA", "5", "USD 2.210")
-        c2.metric("A COBRAR", "4", "USD 1.850")
-        c3.metric("TOTAL", "20", "USD 15.400")
-        
-        st.write("---")
-        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-        st.subheader("📈 Proyección de Cobranza")
-        st.area_chart([12, 18, 14, 25, 30])
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- DOCUMENTOS (RECIBO PROFESIONAL SIN LIBRERÍAS) ---
-    elif opcion == "📄 Documentos":
-        st.header("📄 Generador de Recibos Oficiales")
-        sel = st.selectbox("Seleccione Cliente:", df["Cliente"])
+    if opcion == "📄 Recibos":
+        st.header("📄 Generador de Comprobantes Oficiales")
+        sel = st.selectbox("Seleccione el Cliente:", df["Cliente"])
         info = df[df["Cliente"] == sel].iloc[0]
 
-        # El Recibo en pantalla
+        # RENDERIZADO DEL RECIBO PROFESIONAL
         st.markdown(f"""
-            <div class="recibo-hoja">
-                <h1 style="color: #004a99 !important; text-align: center; margin: 0;">AUTOMOTORA OTORMÍN</h1>
-                <p style="text-align: center; font-size: 0.8em; color: #555;">PAYSANDÚ - URUGUAY</p>
-                <hr>
-                <div style="display: flex; justify-content: space-between;">
-                    <span><b>RECIBO:</b> {info['Recibo']}</span>
-                    <span><b>FECHA:</b> {datetime.now().strftime('%d/%m/%Y')}</span>
+            <div class="recibo-box">
+                <div class="header-recibo">
+                    <div>
+                        <h1 style="color: #004a99 !important; margin:0; text-align:left;">OTORMÍN</h1>
+                        <small>AUTOMOTORA & GESTIÓN</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="margin:0;"><b>RECIBO INTERNO:</b> {info['Recibo_ID']}</p>
+                        <p style="margin:0;"><b>FECHA:</b> {datetime.now().strftime('%d/%m/%Y')}</p>
+                    </div>
                 </div>
-                <br>
-                <p><b>CLIENTE:</b> {sel}</p>
-                <p><b>AUTOMOTOR:</b> {info['Vehículo']} (Matrícula: {info['Matrícula']})</p>
-                <p><b>CUOTA NRO:</b> {info['Cuota']}</p>
-                <br>
-                <div style="border: 2px solid black; padding: 10px; text-align: center; font-size: 1.5em;">
-                    <b>IMPORTE: USD {info['Saldo']}</b>
+                
+                <div class="datos-cliente">
+                    <p><b>CLIENTE:</b> {sel.upper()}</p>
+                    <p><b>VEHÍCULO:</b> {info['Vehículo']} (Matrícula: {info['Matrícula']})</p>
+                    <p><b>DETALLE DE PAGO:</b> Pago de cuota nro. {info['Cuota_Nro']}</p>
+                    <p><b>PENDIENTES:</b> Al cliente le restan <b>{info['Cuotas_Restantes']}</b> cuotas para finalizar el plan.</p>
                 </div>
-                <br><br><br>
-                <div style="border-top: 1px solid black; width: 200px; margin-left: auto; text-align: center;">
-                    <p style="font-size: 0.8em;">Firma Administración</p>
+                
+                <div class="monto-box">
+                    IMPORTE: USD {info['Saldo']}
                 </div>
+                
+                <div style="margin-top: 50px; display: flex; justify-content: space-around;">
+                    <div style="border-top: 1px solid black; width: 200px; text-align: center;">
+                        <p style="font-size: 0.8em;">Firma Administración</p>
+                    </div>
+                    <div style="border-top: 1px solid black; width: 200px; text-align: center;">
+                        <p style="font-size: 0.8em;">Firma Cliente</p>
+                    </div>
+                </div>
+                <p style="text-align: center; font-size: 0.7em; color: gray; margin-top: 30px;">
+                    Paysandú, Uruguay - Sistema CRM Otormín 2026
+                </p>
             </div>
         """, unsafe_allow_html=True)
         
         st.write("")
-        st.warning("💡 **Para guardar como PDF:** Presioná **CTRL + P** (o 'Imprimir' en el menú del navegador) y seleccioná **'Guardar como PDF'**.")
+        st.success("✅ Recibo generado correctamente. Para guardarlo como PDF o imprimirlo, presiona **CTRL + P**.")
 
-    elif opcion == "🔍 Buscador":
-        st.header("🔍 Buscador de Cartera")
-        busq = st.text_input("Nombre o Matrícula:")
-        res = df[df['Cliente'].str.contains(busq, case=False) | df['Matrícula'].str.contains(busq, case=False)]
-        st.dataframe(res, use_container_width=True, hide_index=True)
+    elif opcion == "📊 Tablero":
+        st.metric("MOROSIDAD", "5 Clientes", "USD 2.210")
+        st.area_chart([10, 25, 15, 30, 45])
 
     elif opcion == "💰 Cobros":
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.subheader("Estado de Cuentas")
+        st.table(df[["Cliente", "Vehículo", "Saldo", "Cuota_Nro", "Cuotas_Restantes"]])
+
+    elif opcion == "🔍 Buscador":
+        st.header("🔍 Buscador de Archivos")
+        busq = st.text_input("Ingresar nombre:")
+        res = df[df['Cliente'].str.contains(busq, case=False)]
+        st.dataframe(res, use_container_width=True, hide_index=True)
