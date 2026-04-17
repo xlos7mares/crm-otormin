@@ -14,7 +14,7 @@ st.set_page_config(
 if "logueado" not in st.session_state:
     st.session_state["logueado"] = False
 
-# --- ESTILOS VISUALES ---
+# --- ESTILOS VISUALES (OSCURO PROFESIONAL) ---
 st.markdown("""
     <style>
         .stApp { background-color: #0E1117; color: white; }
@@ -44,11 +44,11 @@ if not st.session_state["logueado"]:
                     st.session_state["logueado"] = True
                     st.rerun()
                 else:
-                    st.error("Acceso Denegado")
+                    st.error("Acceso Denegado. Verifique sus credenciales.")
 
 # 4. SISTEMA ACTIVO (POST-LOGIN)
 else:
-    # Datos de la Cartera (Otormín)
+    # --- DATOS DE PRUEBA PARA OTORMÍN ---
     @st.cache_data
     def cargar_datos():
         data = {
@@ -57,14 +57,16 @@ else:
             "Vencimiento": ["2026-03-30", "2026-04-10", "2026-04-15", "2026-03-25", "2026-05-01"],
             "Estado": ["VENCIDO", "AL DÍA", "AL DÍA", "VENCIDO", "AL DÍA"],
             "Saldo (USD)": [450, 0, 0, 320, 0],
-            "lat": [-32.3162, -32.3210, -32.3050, -32.3320, -32.3120],
-            "lon": [-58.0850, -58.0790, -58.0910, -58.0820, -58.1000]
+            "latitude": [-32.3162, -32.3210, -32.3050, -32.3320, -32.3120],
+            "longitude": [-58.0850, -58.0790, -58.0910, -58.0820, -58.1000]
         }
         df = pd.DataFrame(data)
-        # Link de WhatsApp
+        
+        # Link de WhatsApp para cobranza
         def link_wa(fila):
-            msg = f"Otormín Informa: Hola {fila['Cliente']}, cuota {fila['Vehículo']} {fila['Estado']}. Saldo: ${fila['Saldo (USD)']}."
+            msg = f"Automotora Otormín Informa: Hola {fila['Cliente']}, recordamos vencimiento de su {fila['Vehículo']}. Estado: {fila['Estado']}. Saldo: ${fila['Saldo (USD)']}."
             return f"https://wa.me/59899000000?text={urllib.parse.quote(msg)}"
+        
         df["Notificar"] = df.apply(link_wa, axis=1)
         return df
 
@@ -72,22 +74,22 @@ else:
 
     # --- NAVEGACIÓN LATERAL ---
     with st.sidebar:
-        st.title("OTORMÍN")
-        st.markdown("### 🛠️ MENÚ PRINCIPAL")
-        opcion = st.radio("Módulos:", [
+        st.markdown("<h2 style='color:#55acee; text-align:center;'>OTORMÍN</h2>", unsafe_allow_html=True)
+        st.write("---")
+        opcion = st.radio("Módulos del Sistema:", [
             "📊 Tablero", 
             "💰 Cobros", 
             "🔍 Buscador",
             "📄 Documentos",
-            "📍 Mapa"
+            "📍 Mapa de Cobranza"
         ])
         st.write("---")
         if st.button("🚪 Cerrar Sesión"):
             st.session_state["logueado"] = False
             st.rerun()
 
-    # --- CONTENIDO SEGÚN MÓDULO ---
-    st.markdown(f"<h1 style='text-align: center;'>OTORMÍN - {opcion.upper()}</h1>", unsafe_allow_html=True)
+    # --- CONTENIDO DE MÓDULOS ---
+    st.markdown(f"<h1 style='text-align: center;'>CRM OTORMÍN - {opcion.upper()}</h1>", unsafe_allow_html=True)
     st.write("---")
 
     if opcion == "📊 Tablero":
@@ -95,12 +97,11 @@ else:
         with c1: st.markdown('<div class="card"><h3 style="color:gray">EN MORA</h3><h2 style="color:red">5</h2><p>USD 2.210</p></div>', unsafe_allow_html=True)
         with c2: st.markdown('<div class="card"><h3 style="color:gray">A COBRAR</h3><h2 style="color:cyan">4</h2><p>USD 1.850</p></div>', unsafe_allow_html=True)
         with c3: st.markdown('<div class="card"><h3 style="color:gray">TOTAL</h3><h2>20</h2><p>USD 15.400</p></div>', unsafe_allow_html=True)
-        st.subheader("📈 Proyección Semanal")
-        st.line_chart({"Cobros": [15, 30, 22, 45]})
+        st.subheader("📈 Proyección de Cobranza")
+        st.line_chart({"Cobros": [10, 25, 18, 30, 42]})
 
     elif opcion == "💰 Cobros":
-        st.subheader("📋 Gestión de Cartera")
-        # Semáforo de colores
+        st.subheader("📋 Gestión de Cartera Activa")
         def color_estado(val):
             color = '#701010' if val == "VENCIDO" else '#155123'
             return f'background-color: {color}; color: white'
@@ -112,23 +113,21 @@ else:
         )
 
     elif opcion == "🔍 Buscador":
-        busqueda = st.text_input("Buscar por nombre o vehículo:")
-        if busqueda:
-            res = df[df['Cliente'].str.contains(busqueda, case=False) | df['Vehículo'].str.contains(busqueda, case=False)]
+        busq = st.text_input("Ingresa nombre o auto para filtrar:")
+        if busq:
+            res = df[df['Cliente'].str.contains(busq, case=False) | df['Vehículo'].str.contains(busq, case=False)]
             for _, r in res.iterrows():
-                with st.expander(f"👤 {r['Cliente']} - {r['Vehículo']}"):
-                    st.write(f"Estado: {r['Estado']} | Saldo: ${r['Saldo (USD)']}")
-                    st.markdown(f"[📲 Enviar Recordatorio]({r['Notificar']})")
+                with st.expander(f"👤 FICHA: {r['Cliente']}"):
+                    st.write(f"Vehículo: {r['Vehículo']} | Saldo: ${r['Saldo (USD)']}")
+                    st.markdown(f"[Enviar mensaje de cobro]({r['Notificar']})")
 
     elif opcion == "📄 Documentos":
-        st.subheader("📄 Generación de Comprobantes")
-        cliente_sel = st.selectbox("Seleccione Cliente:", df["Cliente"])
-        if st.button("Generar Recibo Oficial"):
-            st.success(f"Recibo de Automotora Otormín para {cliente_sel} generado.")
-            st.info("Módulo de descarga habilitado para versión Pro.")
+        st.subheader("📄 Generación de Recibos y Estados de Cuenta")
+        cliente_sel = st.selectbox("Seleccione un cliente:", df["Cliente"])
+        if st.button("Generar PDF Oficial"):
+            st.success(f"Recibo generado para {cliente_sel}.")
+            st.info("Formato profesional de Otormín listo para enviar por email.")
 
-    elif opcion == "📍 Mapa":
-        st.subheader("📍 Geolocalización en Paysandú")
-        # Renombramos para que el mapa lo tome directo
-        df_mapa = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-        st.map(df_mapa[["latitude", "longitude"]], color="#ff4b4b", size=40)
+    elif opcion == "📍 Mapa de Cobranza":
+        st.subheader("📍 Ubicación de deudores en Paysandú")
+        st.map(df[["latitude", "longitude"]], color="#ff4b4b")
