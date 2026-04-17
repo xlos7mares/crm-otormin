@@ -1,17 +1,8 @@
 import streamlit as st
 import pandas as pd
-import urllib.parse
 from datetime import datetime
-import os
 
-# --- IMPORTACIÓN SEGURA DE FPDF ---
-try:
-    from fpdf import FPDF
-    PDF_DISPONIBLE = True
-except ImportError:
-    PDF_DISPONIBLE = False
-
-# 1. CONFIGURACIÓN Y ESTILO (NEGRO Y AZUL)
+# 1. CONFIGURACIÓN Y ESTILO (NEGRO TOTAL)
 st.set_page_config(page_title="CRM OTORMÍN 2026", page_icon="🚗", layout="wide")
 
 st.markdown("""
@@ -19,15 +10,7 @@ st.markdown("""
         .stApp { background-color: #0B0E11; color: #E1E8ED; }
         [data-testid="stSidebar"] { background-color: #15191D; border-right: 2px solid #55acee; }
         h1, h2, h3 { color: #55acee !important; text-align: center; }
-        .metric-container {
-            display: flex;
-            justify-content: space-around;
-            background-color: #1C2126;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #30363d;
-            margin-bottom: 20px;
-        }
+        .stDataFrame { background-color: #1C2126; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -51,123 +34,77 @@ if not st.session_state["logueado"]:
 
 # 3. SISTEMA OPERATIVO
 else:
-    # Datos extendidos para el recibo
+    # Datos completos
     data = {
         "Cliente": ["Federico Rossi", "María Gonzalez", "Juan Castro", "Ana Ledesma"],
         "Vehículo": ["Mercedes Benz A200", "Toyota Hilux", "VW Gol Trend", "Fiat Cronos"],
         "Matrícula": ["IAE 1234", "MAA 5678", "PAA 9012", "IAA 3456"],
         "Estado": ["VENCIDO", "AL DÍA", "AL DÍA", "VENCIDO"],
-        "Saldo (USD)": [450, 0, 0, 320],
-        "Cuota_Actual": [5, 12, 8, 3],
-        "Recibo_Nro": ["OT-2026-001", "OT-2026-002", "OT-2026-003", "OT-2026-004"],
-        "lat": [-32.3162, -32.3210, -32.3050, -32.3320],
-        "lon": [-58.0850, -58.0790, -58.0910, -58.0820]
+        "Saldo (USD)": [450, 200, 0, 320],
+        "Cuota": [5, 12, 8, 3],
+        "Recibo_Nro": ["OT-2026-001", "OT-2026-002", "OT-2026-003", "OT-2026-004"]
     }
     df = pd.DataFrame(data)
 
     with st.sidebar:
         st.title("OTORMÍN")
-        opcion = st.radio("MENÚ:", ["📊 Tablero", "💰 Cobros", "🔍 Buscador", "📄 Documentos", "📍 Mapa"])
+        opcion = st.radio("MENÚ:", ["📊 Tablero", "💰 Cobros", "🔍 Buscador", "📄 Documentos"])
         if st.button("🚪 Cerrar Sesión"):
             st.session_state["logueado"] = False
             st.rerun()
 
-    st.markdown(f"<h2>Sección: {opcion.upper()}</h2>", unsafe_allow_html=True)
+    # --- BUSCADOR CORREGIDO ---
+    if opcion == "🔍 Buscador":
+        st.markdown("<h2>🔍 Buscador de Clientes</h2>", unsafe_allow_html=True)
+        busq = st.text_input("Escribí el nombre del cliente o el vehículo:", placeholder="Ej: Mercedes...")
+        
+        # Si hay búsqueda, filtra. Si no, muestra todos.
+        if busq:
+            resultado = df[df['Cliente'].str.contains(busq, case=False) | df['Vehículo'].str.contains(busq, case=False)]
+        else:
+            resultado = df
+            
+        st.dataframe(resultado, use_container_width=True, hide_index=True)
 
-    if opcion == "📊 Tablero":
-        st.markdown(f"""
-            <div class="metric-container">
-                <div style="text-align:center"><strong>EN MORA</strong><br><span style="font-size:2em; color:#55acee">5</span></div>
-                <div style="text-align:center"><strong>A COBRAR</strong><br><span style="font-size:2em; color:#55acee">4</span></div>
-                <div style="text-align:center"><strong>TOTAL</strong><br><span style="font-size:2em; color:#55acee">20</span></div>
-            </div>
-        """, unsafe_allow_html=True)
-        st.area_chart([10, 25, 15, 30, 45])
-
-    elif opcion == "💰 Cobros":
-        st.subheader("Lista de Cobranza")
-        st.dataframe(df[["Cliente", "Vehículo", "Estado", "Saldo (USD)"]], use_container_width=True, hide_index=True)
-
+    # --- DOCUMENTOS (RECIBO PDF SEGURO) ---
     elif opcion == "📄 Documentos":
-        st.subheader("Generación de Recibo PDF")
-        sel = st.selectbox("Seleccione Cliente:", df["Cliente"])
+        st.markdown("<h2>📄 Generación de Recibo Oficial</h2>", unsafe_allow_html=True)
+        sel = st.selectbox("Seleccione el Cliente para el recibo:", df["Cliente"])
         info = df[df["Cliente"] == sel].iloc[0]
         
-        # Previsualización de datos que irán al PDF
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write(f"**Cliente:** {sel}")
-            st.write(f"**Vehículo:** {info['Vehículo']}")
-        with col2:
-            st.write(f"**Recibo Int:** {info['Recibo_Nro']}")
-            st.write(f"**Importe:** USD {info['Saldo (USD)']}")
+        # Diseño del recibo en pantalla (HTML)
+        recibo_html = f"""
+        <div style="background-color: white; color: black; padding: 30px; border-radius: 10px; font-family: Arial;">
+            <h1 style="color: #004a99 !important; margin: 0;">AUTOMOTORA OTORMÍN</h1>
+            <hr>
+            <p style="text-align: right;"><b>RECIBO NRO:</b> {info['Recibo_Nro']}</p>
+            <p><b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}</p>
+            <br>
+            <p><b>CLIENTE:</b> {sel}</p>
+            <p><b>VEHÍCULO:</b> {info['Vehículo']} (Matrícula: {info['Matrícula']})</p>
+            <p><b>CUOTA NRO:</b> {info['Cuota']}</p>
+            <br>
+            <h2 style="color: black !important; text-align: right;">IMPORTE: USD {info['Saldo (USD)']}</h2>
+            <br><br>
+            <p style="text-align: center; font-size: 0.8em;">Comprobante oficial de gestión de cartera - Otormín 2026</p>
+        </div>
+        """
+        st.markdown(recibo_html, unsafe_allow_html=True)
+        st.write("")
+        
+        # Botón de impresión (Simulado para que no falle el servidor)
+        st.download_button(
+            label="📥 DESCARGAR COMPROBANTE (TXT)",
+            data=recibo_html.replace("<br>", "\n").strip(),
+            file_name=f"Recibo_{info['Recibo_Nro']}.txt",
+            mime="text/plain"
+        )
+        st.info("Para imprimir en PDF: Presioná Ctrl+P en tu teclado y seleccioná 'Guardar como PDF'.")
 
-        if PDF_DISPONIBLE:
-            if st.button("📥 GENERAR PDF OFICIAL"):
-                pdf = FPDF()
-                pdf.add_page()
-                
-                # --- ENCABEZADO Y LOGO ---
-                # Si existe logo.png lo pone, sino hace un cuadro azul
-                if os.path.exists("logo.png"):
-                    pdf.image("logo.png", 10, 8, 33)
-                else:
-                    pdf.set_fill_color(85, 172, 238)
-                    pdf.rect(0, 0, 210, 35, 'F')
-                
-                pdf.set_font("Arial", 'B', 22)
-                pdf.set_text_color(255, 255, 255)
-                pdf.cell(0, 15, "AUTOMOTORA OTORMÍN", 0, 1, 'C')
-                pdf.set_font("Arial", 'I', 10)
-                pdf.cell(0, 5, "Gestión de Cartera - Paysandú, Uruguay", 0, 1, 'C')
-                
-                # --- DATOS DEL RECIBO ---
-                pdf.set_text_color(0, 0, 0)
-                pdf.ln(25)
-                pdf.set_font("Arial", 'B', 14)
-                pdf.cell(0, 10, f"RECIBO INTERNO: {info['Recibo_Nro']}", 0, 1, 'R')
-                pdf.set_font("Arial", '', 11)
-                pdf.cell(0, 10, f"Fecha de emisión: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
-                pdf.ln(5)
-                pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-                pdf.ln(10)
-                
-                # --- CUERPO DEL DOCUMENTO ---
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "DETALLES DEL CLIENTE Y COBRO:", 0, 1)
-                pdf.set_font("Arial", '', 12)
-                
-                # Tabla de datos
-                pdf.cell(50, 10, "Nombres y Apellidos:", 1)
-                pdf.cell(0, 10, f" {sel}", 1, 1)
-                
-                pdf.cell(50, 10, "Datos del Automotor:", 1)
-                pdf.cell(0, 10, f" {info['Vehículo']} (Matrícula: {info['Matrícula']})", 1, 1)
-                
-                pdf.cell(50, 10, "Cuota Nro:", 1)
-                pdf.cell(0, 10, f" {info['Cuota_Actual']}", 1, 1)
-                
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(50, 10, "IMPORTE RECIBIDO:", 1)
-                pdf.set_text_color(200, 0, 0)
-                pdf.cell(0, 10, f" USD {info['Saldo (USD)']}", 1, 1)
-                
-                # --- FIRMA Y PIE ---
-                pdf.set_text_color(0, 0, 0)
-                pdf.ln(30)
-                pdf.line(120, pdf.get_y(), 190, pdf.get_y())
-                pdf.set_font("Arial", 'I', 10)
-                pdf.cell(0, 10, "Firma de Administración Otormín", 0, 1, 'R')
-                
-                pdf_output = pdf.output(dest='S').encode('latin-1')
-                st.download_button(
-                    label="💾 Descargar Recibo PDF",
-                    data=pdf_output,
-                    file_name=f"Recibo_{info['Recibo_Nro']}_{sel.replace(' ','_')}.pdf",
-                    mime="application/pdf"
-                )
-        else:
-            st.error("Instalando componentes PDF... Reintente en 30 segundos.")
-
-    elif opcion == "📍 Mapa":
-        st.map(df.rename(columns={'lat': 'latitude', 'lon': 'longitude'}))
+    # --- TABLERO Y COBROS ---
+    elif opcion == "📊 Tablero":
+        st.metric("EN MORA", "5", "USD 2.210")
+        st.area_chart([10, 25, 15, 30, 45])
+        
+    elif opcion == "💰 Cobros":
+        st.dataframe(df, use_container_width=True, hide_index=True)
